@@ -32,7 +32,7 @@ export function generateCode() {
   return Array.from({ length: 4 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join('')
 }
 
-export async function createRoom(db, uid, pack, totalRounds) {
+export async function createRoom(db, uid, pack, totalRounds, audioAll = false) {
   let code
   for (let i = 0; i < 10; i++) {
     code = generateCode()
@@ -45,6 +45,7 @@ export async function createRoom(db, uid, pack, totalRounds) {
     pack: { id: pack.id, name: pack.name, emoji: pack.emoji, term: pack.term ?? '', artistOnly: pack.artistOnly ?? false },
     totalRounds,
     currentRound: 0,
+    audioAll,
     createdAt: Date.now(),
   })
   return code
