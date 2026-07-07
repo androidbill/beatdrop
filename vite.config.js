@@ -10,7 +10,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'],
       manifest: {
-        name: 'BeatDrop - Name That Tune',
+        name: 'BeatDrop',
         short_name: 'BeatDrop',
         description: 'The ultimate music party game',
         theme_color: '#6C63FF',
