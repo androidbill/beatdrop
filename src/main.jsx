@@ -7,7 +7,7 @@ import {
   createRoom, joinRoom, startGame, submitAnswer, advanceRound, leaveRoom, calcScores,
 } from './firebase.js'
 
-const APP_VERSION = '2026.07.06.13'
+const APP_VERSION = '2026.07.06.14'
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 
@@ -21,36 +21,71 @@ const THEMES = [
 
 const SONG_PACKS = [
   // Decades
-  { id: '60s',       name: '60s Classics',  term: '60s classic hits',            emoji: '☮️', desc: 'Peace, love & rock n roll' },
-  { id: '70s',       name: '70s Hits',      term: '70s greatest hits',           emoji: '🪩', desc: 'Boogie nights!' },
-  { id: '80s',       name: '80s Hits',      term: '80s classic pop hits',        emoji: '🕺', desc: 'Totally radical!' },
-  { id: '90s',       name: '90s Bangers',   term: '90s greatest hits',           emoji: '💿', desc: 'All that and a bag of chips' },
-  { id: '00s',       name: '2000s Pop',     term: '2000s pop hits',              emoji: '🌟', desc: 'Y2K certified bops' },
-  { id: '10s',       name: '2010s Hits',    term: '2010s pop hits',              emoji: '📱', desc: 'The Instagram era' },
-  { id: 'today',     name: "Today's Hits",  term: 'pop hits 2024',               emoji: '🔥', desc: 'Current bangers only' },
+  { id: '50s',       name: '50s Rock & Roll', term: '50s rock and roll classics',   emoji: '🎙️', desc: 'Hound dog & blue suede shoes' },
+  { id: '60s',       name: '60s Classics',    term: '60s classic hits',             emoji: '☮️', desc: 'Peace, love & rock n roll' },
+  { id: '70s',       name: '70s Hits',        term: '70s greatest hits',            emoji: '🪩', desc: 'Boogie nights!' },
+  { id: '80s',       name: '80s Hits',        term: '80s classic pop hits',         emoji: '🕺', desc: 'Totally radical!' },
+  { id: '90s',       name: '90s Bangers',     term: '90s greatest hits',            emoji: '💿', desc: 'All that and a bag of chips' },
+  { id: '00s',       name: '2000s Pop',       term: '2000s pop hits',               emoji: '🌟', desc: 'Y2K certified bops' },
+  { id: '10s',       name: '2010s Hits',      term: '2010s pop hits',               emoji: '📱', desc: 'The Instagram era' },
+  { id: 'today',     name: "Today's Hits",    term: 'pop hits 2024',                emoji: '🔥', desc: 'Current bangers only' },
   // Genres
-  { id: 'party',     name: 'Party Mix',     term: 'top hits',                    emoji: '🎉', desc: 'The ultimate crowd pleaser' },
-  { id: 'pop',       name: 'Pop Anthems',   term: 'pop anthems hits',            emoji: '🌈', desc: 'Sing it loud' },
-  { id: 'hiphop',    name: 'Hip Hop',       term: 'hip hop rap classics',        emoji: '🎤', desc: 'Drop the beat' },
-  { id: 'rnb',       name: 'R&B Soul',      term: 'rnb soul hits',               emoji: '💃', desc: 'Feel the groove' },
-  { id: 'rock',      name: 'Classic Rock',  term: 'classic rock hits',           emoji: '🎸', desc: 'Turn it up to 11' },
-  { id: 'indierock', name: 'Indie Rock',    term: 'indie rock alternative hits', emoji: '🎵', desc: 'Hipster approved' },
-  { id: 'metal',     name: 'Metal',         term: 'heavy metal hits',            emoji: '🤘', desc: 'Headbanger special' },
-  { id: 'punk',      name: 'Punk Rock',     term: 'punk rock hits',              emoji: '⚡', desc: 'Anarchy in the charts' },
-  { id: 'country',   name: 'Country',       term: 'country hits',                emoji: '🤠', desc: 'Boots & banjos baby' },
-  { id: 'latin',     name: 'Latin Hits',    term: 'latin pop hits',              emoji: '🌴', desc: 'Hot hot hot' },
-  { id: 'kpop',      name: 'K-Pop',         term: 'kpop hits',                   emoji: '⭐', desc: 'Annyeong!' },
-  { id: 'reggae',    name: 'Reggae',        term: 'reggae hits',                 emoji: '🎶', desc: 'One love' },
-  { id: 'edm',       name: 'EDM / Dance',   term: 'edm electronic dance music',  emoji: '🎧', desc: 'Drop the bass' },
-  { id: 'jazz',      name: 'Jazz & Blues',  term: 'jazz blues classics',         emoji: '🎷', desc: 'Smooth operator' },
-  { id: 'soul',      name: 'Motown Soul',   term: 'motown soul classics',        emoji: '🕺', desc: 'Straight from Detroit' },
-  { id: 'disney',    name: 'Disney',        term: 'disney movie songs',          emoji: '🏰', desc: 'Hakuna Matata!' },
-  { id: 'christmas', name: 'Christmas',     term: 'christmas holiday songs',     emoji: '🎄', desc: 'Tis the season' },
-  { id: 'bollywood', name: 'Bollywood',     term: 'bollywood hits',              emoji: '🎬', desc: 'Bollywood magic' },
-  { id: 'kids',      name: 'Kids Songs',    term: 'children songs kids',         emoji: '🧒', desc: 'For the young ones' },
+  { id: 'party',     name: 'Party Mix',       term: 'top party hits',               emoji: '🎉', desc: 'The ultimate crowd pleaser' },
+  { id: 'pop',       name: 'Pop Anthems',     term: 'pop anthems hits',             emoji: '🌈', desc: 'Sing it loud' },
+  { id: 'hiphop',    name: 'Hip Hop',         term: 'hip hop rap classics',         emoji: '🎤', desc: 'Drop the beat' },
+  { id: 'rnb',       name: 'R&B Soul',        term: 'rnb soul hits',                emoji: '💃', desc: 'Feel the groove' },
+  { id: 'rock',      name: 'Classic Rock',    term: 'classic rock hits',            emoji: '🎸', desc: 'Turn it up to 11' },
+  { id: 'indierock', name: 'Indie Rock',      term: 'indie rock alternative hits',  emoji: '🎵', desc: 'Hipster approved' },
+  { id: 'countryrock',name: 'Country Rock',   term: 'country rock hits',            emoji: '🤘', desc: 'Boots meet power chords' },
+  { id: 'metal',     name: 'Metal',           term: 'heavy metal hits',             emoji: '🔥', desc: 'Headbanger special' },
+  { id: 'punk',      name: 'Punk Rock',       term: 'punk rock hits',               emoji: '⚡', desc: 'Anarchy in the charts' },
+  { id: 'grunge',    name: 'Grunge',          term: 'grunge rock 90s',              emoji: '🧥', desc: 'Nevermind the flannel' },
+  { id: 'country',   name: 'Country',         term: 'country hits',                 emoji: '🤠', desc: 'Boots & banjos baby' },
+  { id: 'newcountry', name: 'Modern Country', term: 'modern country hits 2020',     emoji: '🐴', desc: 'Tailgate ready' },
+  { id: 'bluegrass', name: 'Bluegrass',       term: 'bluegrass folk music',         emoji: '🪕', desc: 'Pickin\' & grinnin\'' },
+  { id: 'latin',     name: 'Latin Hits',      term: 'latin pop hits',               emoji: '🌴', desc: 'Hot hot hot' },
+  { id: 'kpop',      name: 'K-Pop',           term: 'kpop hits',                    emoji: '⭐', desc: 'Annyeong!' },
+  { id: 'reggae',    name: 'Reggae',          term: 'reggae hits',                  emoji: '🎶', desc: 'One love' },
+  { id: 'edm',       name: 'EDM / Dance',     term: 'edm electronic dance music',   emoji: '🎧', desc: 'Drop the bass' },
+  { id: 'jazz',      name: 'Jazz',            term: 'jazz classics',                emoji: '🎷', desc: 'Smooth operator' },
+  { id: 'blues',     name: 'Blues',           term: 'blues classics',               emoji: '🎸', desc: 'Born under a bad sign' },
+  { id: 'soul',      name: 'Motown Soul',     term: 'motown soul classics',         emoji: '🕺', desc: 'Straight from Detroit' },
+  { id: 'gospel',    name: 'Gospel',          term: 'gospel christian music',       emoji: '🙏', desc: 'Hallelujah!' },
+  { id: 'folk',      name: 'Folk',            term: 'folk music classics',          emoji: '🌿', desc: 'Storytelling in song' },
+  { id: 'opera',     name: 'Opera & Classical',term: 'opera classical music hits',  emoji: '🎻', desc: 'Fancy pants approved' },
+  { id: 'bollywood', name: 'Bollywood',       term: 'bollywood hits',               emoji: '🎬', desc: 'Bollywood magic' },
+  { id: 'afrobeats', name: 'Afrobeats',       term: 'afrobeats hits',               emoji: '🥁', desc: 'Jollof & vibes' },
+  // Moods & Occasions
+  { id: 'wedding',   name: 'Wedding Songs',   term: 'wedding songs love classics',  emoji: '💒', desc: 'Here comes the bride' },
+  { id: 'campfire',  name: 'Campfire Beats',  term: 'campfire acoustic songs',      emoji: '🔥', desc: 'S\'mores & singalongs' },
+  { id: 'roadtrip',  name: 'Road Trip',       term: 'road trip driving songs',      emoji: '🚗', desc: 'Windows down, volume up' },
+  { id: 'workout',   name: 'Workout Pump',    term: 'workout pump up hits',         emoji: '💪', desc: 'Beast mode activated' },
+  { id: 'chill',     name: 'Chill Vibes',     term: 'chill lounge relax music',     emoji: '😌', desc: 'Zero stress zone' },
+  { id: 'karaoke',   name: 'Karaoke Classics',term: 'karaoke classic sing along',   emoji: '🎙️', desc: 'Grab the mic!' },
+  { id: 'loveballad',name: 'Love Ballads',    term: 'love ballads romantic songs',  emoji: '❤️', desc: 'Pass the tissues' },
+  { id: 'breakup',   name: 'Breakup Bops',    term: 'breakup heartbreak songs',     emoji: '💔', desc: 'Cry it out' },
+  { id: 'summer',    name: 'Summer Vibes',    term: 'summer hits beach songs',      emoji: '🏖️', desc: 'Sun, sand & bops' },
+  { id: 'halloween', name: 'Halloween',       term: 'halloween spooky songs',       emoji: '🎃', desc: 'Things that go bump' },
+  { id: 'christmas', name: 'Christmas',       term: 'christmas holiday songs',      emoji: '🎄', desc: 'Tis the season' },
+  { id: 'pubquiz',   name: 'Pub Quiz Mix',    term: 'classic hits variety mix',     emoji: '🍺', desc: 'Down the pub classics' },
+  { id: 'bbq',       name: 'BBQ & Cookout',   term: 'bbq summer party hits',        emoji: '🍖', desc: 'Fire up the grill' },
+  { id: 'babyshower',name: 'Baby Shower',     term: 'baby shower sweet songs',      emoji: '👶', desc: 'Precious moments' },
+  { id: 'prom',      name: 'Prom Night',      term: 'prom slow dance songs',        emoji: '🪩', desc: 'The slow dance awaits' },
+  // Film & TV
+  { id: 'disney',    name: 'Disney',          term: 'disney movie songs',           emoji: '🏰', desc: 'Hakuna Matata!' },
+  { id: 'movies',    name: 'Movie Soundtracks',term: 'movie soundtrack hits',       emoji: '🎬', desc: 'Lights, camera, music!' },
+  { id: 'tvthemes',  name: 'TV Themes',       term: 'tv show theme songs',          emoji: '📺', desc: 'You know the words' },
+  { id: 'videogames',name: 'Video Game Music',term: 'video game music soundtrack',  emoji: '🎮', desc: 'Player one ready' },
+  // Kids
+  { id: 'kids',      name: 'Kids Songs',      term: 'children songs kids nursery',  emoji: '🧒', desc: 'For the young ones' },
+  { id: 'cartoons',  name: 'Cartoon Songs',   term: 'cartoon theme songs',          emoji: '🐭', desc: 'Saturday morning vibes' },
 ]
 
-const DECADE_IDS = ['60s','70s','80s','90s','00s','10s','today']
+const DECADE_IDS  = ['50s','60s','70s','80s','90s','00s','10s','today']
+const GENRE_IDS   = ['party','pop','hiphop','rnb','rock','indierock','countryrock','metal','punk','grunge','country','newcountry','bluegrass','latin','kpop','reggae','edm','jazz','blues','soul','gospel','folk','opera','bollywood','afrobeats']
+const MOOD_IDS    = ['wedding','campfire','roadtrip','workout','chill','karaoke','loveballad','breakup','summer','halloween','christmas','pubquiz','bbq','babyshower','prom']
+const SCREEN_IDS  = ['disney','movies','tvthemes','videogames']
+const KIDS_IDS    = ['kids','cartoons']
 
 const AVATARS = [
   '🐻','🦊','🐼','🐯','🦁','🐺','🐸','🐙','🦄','🐲',
@@ -506,8 +541,23 @@ function PackPicker({ pack, onChange }) {
             <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>
           ))}
         </optgroup>
-        <optgroup label="── Genres ───────────">
-          {SONG_PACKS.filter(p => !DECADE_IDS.includes(p.id)).map(p => (
+        <optgroup label="── Genres ────────────">
+          {SONG_PACKS.filter(p => GENRE_IDS.includes(p.id)).map(p => (
+            <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>
+          ))}
+        </optgroup>
+        <optgroup label="── Moods & Occasions ─">
+          {SONG_PACKS.filter(p => MOOD_IDS.includes(p.id)).map(p => (
+            <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>
+          ))}
+        </optgroup>
+        <optgroup label="── Film, TV & Games ──">
+          {SONG_PACKS.filter(p => SCREEN_IDS.includes(p.id)).map(p => (
+            <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>
+          ))}
+        </optgroup>
+        <optgroup label="── Kids ──────────────">
+          {SONG_PACKS.filter(p => KIDS_IDS.includes(p.id)).map(p => (
             <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>
           ))}
         </optgroup>

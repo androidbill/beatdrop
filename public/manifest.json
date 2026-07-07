@@ -1,0 +1,17 @@
+{
+  "name": "BeatDrop - Name That Tune",
+  "short_name": "BeatDrop",
+  "description": "The ultimate music party game",
+  "start_url": "/beatdrop/",
+  "scope": "/beatdrop/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0D0D1A",
+  "theme_color": "#6C63FF",
+  "icons": [
+    { "src": "/beatdrop/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/beatdrop/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/beatdrop/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/beatdrop/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
