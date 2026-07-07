@@ -7,7 +7,7 @@ import {
   createRoom, joinRoom, startGame, submitAnswer, advanceRound, leaveRoom, calcScores,
 } from './firebase.js'
 
-const APP_VERSION = '2026.07.06.10'
+const APP_VERSION = '2026.07.06.12'
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 
@@ -321,7 +321,7 @@ function ThreeDotsMenu() {
 
 // ─── WELCOME SCREEN ───────────────────────────────────────────────────────────
 
-function WelcomeScreen({ onCreate, onJoin, onSolo, theme, onThemeChange, signingIn }) {
+function WelcomeScreen({ onCreate, onJoin, onSolo, theme, onThemeChange, signingIn, outdated }) {
   return (
     <div className="screen welcome-screen">
       <PullToRefresh />
@@ -347,7 +347,14 @@ function WelcomeScreen({ onCreate, onJoin, onSolo, theme, onThemeChange, signing
           </div>
         </div>
 
-        {signingIn ? (
+        {outdated ? (
+          <div className="outdated-box">
+            <div className="outdated-icon">⚠️</div>
+            <p className="outdated-title">Update Required</p>
+            <p className="outdated-msg">A new version of BeatDrop is available. Please refresh before playing.</p>
+            <button className="btn-primary btn-huge" onClick={() => window.location.reload()}>🔄 Refresh Now</button>
+          </div>
+        ) : signingIn ? (
           <div className="signing-in"><div className="spinner" /><p>Connecting...</p></div>
         ) : (
           <div className="welcome-btns">
@@ -531,6 +538,7 @@ function PackPicker({ pack, onChange }) {
 function CreateRoomScreen({ onStart, onBack, loading, error }) {
   const [pack, setPack] = useState(SONG_PACKS[0])
   const [rounds, setRounds] = useState(10)
+  const [audioAll, setAudioAll] = useState(false)
 
   return (
     <div className="screen pack-screen">
@@ -549,9 +557,18 @@ function CreateRoomScreen({ onStart, onBack, loading, error }) {
           ))}
         </div>
 
+        <button className="audio-toggle" onClick={() => setAudioAll(v => !v)}>
+          <span className="audio-toggle-icon">{audioAll ? '🔊' : '📱'}</span>
+          <div className="audio-toggle-text">
+            <span className="audio-toggle-label">Music plays from</span>
+            <span className="audio-toggle-value">{audioAll ? 'Everyone\'s device' : 'Host device only'}</span>
+          </div>
+          <div className={`toggle-switch ${audioAll ? 'on' : ''}`}><div className="toggle-knob" /></div>
+        </button>
+
         {error && <p className="error-msg">⚠️ {error}</p>}
 
-        <button className="btn-primary" onClick={() => onStart(pack, rounds)} disabled={loading || !pack?.term}>
+        <button className="btn-primary" onClick={() => onStart(pack, rounds, audioAll)} disabled={loading || !pack?.term}>
           {loading ? 'Creating...' : 'Create Room! 🎵'}
         </button>
       </div>
@@ -643,8 +660,9 @@ function OnlineGameScreen({ uid, isHost, roomCode, roomData, players, rounds, an
 
     if (!round?.startAt || !round?.correct?.previewUrl) return
 
-    // Play audio
-    if (audioRef.current) {
+    // Play audio — host always plays; guests only if audioAll is enabled
+    const shouldPlay = isHost || roomData?.audioAll
+    if (audioRef.current && shouldPlay) {
       audioRef.current.volume = 1
       audioRef.current.src = round.correct.previewUrl
       audioRef.current.currentTime = Math.floor(Math.random() * 12)
@@ -1214,6 +1232,7 @@ function SoloFinalScreen({ players, onPlayAgain, onHome }) {
 function App() {
   const [screen, setScreen] = useState('welcome')
   const [theme, setTheme] = useState(THEMES[0])
+  const [outdated, setOutdated] = useState(false)
 
   // Firebase auth
   const [uid, setUid] = useState(null)
@@ -1244,6 +1263,14 @@ function App() {
 
   // Firebase listeners
   const listenersRef = useRef([])
+
+  // Version check — fetch version.json bypassing cache, block UI if outdated
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL}version.json?t=${Date.now()}`, { cache: 'no-store' })
+      .then(r => r.json())
+      .then(data => { if (data.version !== APP_VERSION) setOutdated(true) })
+      .catch(() => {})
+  }, [])
 
   // Apply theme
   useEffect(() => {
@@ -1327,10 +1354,10 @@ function App() {
   }
 
   // ── Create flow ──
-  async function handleCreateRoom(pack, rounds) {
+  async function handleCreateRoom(pack, rounds, audioAll = false) {
     setCreateLoading(true); setCreateError('')
     try {
-      const code = await createRoom(db, uid, pack, rounds)
+      const code = await createRoom(db, uid, pack, rounds, audioAll)
       setRoomCode(code); setIsHost(true)
       setPendingIdentity({ type: 'create', pack, rounds, code })
       setScreen('identityCreate')
@@ -1425,7 +1452,7 @@ function App() {
     <div className="app" data-theme={theme.id}>
 
       {screen === 'welcome' && (
-        <WelcomeScreen theme={theme} onThemeChange={setTheme} signingIn={signingIn}
+        <WelcomeScreen theme={theme} onThemeChange={setTheme} signingIn={signingIn} outdated={outdated}
           onCreate={() => setScreen('createRoom')}
           onJoin={() => setScreen('joinRoom')}
           onSolo={() => setScreen('soloSetup')} />

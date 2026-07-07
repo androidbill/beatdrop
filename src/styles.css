@@ -1040,6 +1040,61 @@ body {
 }
 .cancel-confirm p { font-size: 1.1rem; font-weight: 700; color: #fff; margin: 0; }
 .cancel-btns { display: flex; gap: 12px; }
+/* ── AUDIO TOGGLE ───────────────────────────────────────────────────────────── */
+.audio-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: var(--card);
+  border: 1.5px solid rgba(var(--primary-rgb), 0.25);
+  border-radius: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  font-family: inherit;
+  color: var(--text);
+  text-align: left;
+}
+.audio-toggle:hover { border-color: rgba(var(--primary-rgb), 0.5); }
+.audio-toggle-icon { font-size: 1.4rem; flex-shrink: 0; }
+.audio-toggle-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.audio-toggle-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.5; }
+.audio-toggle-value { font-size: 0.95rem; font-weight: 700; }
+.toggle-switch {
+  width: 44px; height: 24px; border-radius: 12px;
+  background: rgba(255,255,255,0.15);
+  position: relative; flex-shrink: 0;
+  transition: background 0.25s;
+}
+.toggle-switch.on { background: var(--primary); }
+.toggle-knob {
+  position: absolute; top: 3px; left: 3px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #fff;
+  transition: transform 0.25s cubic-bezier(0.34,1.4,0.64,1);
+}
+.toggle-switch.on .toggle-knob { transform: translateX(20px); }
+
+/* ── OUTDATED BANNER ────────────────────────────────────────────────────────── */
+.outdated-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background: rgba(239,83,80,0.12);
+  border: 1.5px solid rgba(239,83,80,0.4);
+  border-radius: 20px;
+  padding: 24px 20px;
+  text-align: center;
+  width: 100%;
+  animation: screenIn 0.4s cubic-bezier(0.34,1.4,0.64,1);
+}
+.outdated-icon { font-size: 2.2rem; }
+.outdated-title { font-size: 1.2rem; font-weight: 900; color: #EF5350; margin: 0; }
+.outdated-msg { font-size: 0.9rem; color: rgba(255,255,255,0.7); margin: 0; line-height: 1.4; }
+.outdated-box .btn-primary { margin-top: 4px; }
+
 .btn-danger {
   background: linear-gradient(135deg, #EF5350, #c62828);
   color: #fff;
