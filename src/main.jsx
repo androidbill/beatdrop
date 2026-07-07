@@ -7,7 +7,7 @@ import {
   createRoom, joinRoom, startGame, submitAnswer, advanceRound, leaveRoom, calcScores,
 } from './firebase.js'
 
-const APP_VERSION = '2026.07.06.07'
+const APP_VERSION = '2026.07.06.08'
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 
@@ -65,12 +65,18 @@ const ANSWER_LABELS = ['A', 'B', 'C', 'D']
 
 // ─── ITUNES API ───────────────────────────────────────────────────────────────
 
-async function fetchSongs(term) {
-  const url = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song&limit=50&media=music`
+async function fetchSongs(term, artistOnly = false) {
+  const base = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song&limit=100&media=music`
+  const url = artistOnly ? `${base}&attribute=artistTerm` : base
   const res = await fetch(url)
   if (!res.ok) throw new Error('iTunes API error')
   const data = await res.json()
-  return data.results.filter(t => t.previewUrl && t.trackName && t.artistName)
+  let results = data.results.filter(t => t.previewUrl && t.trackName && t.artistName)
+  if (artistOnly) {
+    const lower = term.toLowerCase()
+    results = results.filter(t => t.artistName.toLowerCase().includes(lower))
+  }
+  return results
 }
 
 function buildRoundData(tracks, count) {
@@ -453,12 +459,12 @@ function PackPicker({ pack, onChange }) {
     setCustomError('')
     setValidated(false)
     try {
-      const tracks = await fetchSongs(name)
+      const tracks = await fetchSongs(name, true)
       if (tracks.length < 4) {
         setCustomError(`No songs found for "${name}". Try a different spelling.`)
-        onChange({ id: '__custom__', name: '', term: '', emoji: '🎤', isCustom: true, desc: '' })
+        onChange({ id: '__custom__', name: '', term: '', emoji: '🎤', isCustom: true, artistOnly: true, desc: '' })
       } else {
-        onChange({ id: `custom_${name}`, name, term: name, emoji: '🎤', isCustom: true, desc: `Songs by ${name}` })
+        onChange({ id: `custom_${name}`, name, term: name, emoji: '🎤', isCustom: true, artistOnly: true, desc: `Songs by ${name}` })
         setValidated(true)
       }
     } catch {
@@ -1359,8 +1365,10 @@ function App() {
     setStartLoading(true); setStartError('')
     try {
       const pack = roomData?.pack
-      const term = SONG_PACKS.find(p => p.id === pack?.id)?.term ?? 'top hits'
-      const tracks = await fetchSongs(term)
+      const knownPack = SONG_PACKS.find(p => p.id === pack?.id)
+      const term = knownPack?.term ?? pack?.term ?? 'top hits'
+      const artistOnly = pack?.artistOnly ?? false
+      const tracks = await fetchSongs(term, artistOnly)
       if (tracks.length < 8) throw new Error('Not enough songs found')
       const rounds = buildRoundData(tracks, roomData?.totalRounds ?? 10)
       await startGame(db, roomCode, rounds)
@@ -1381,7 +1389,7 @@ function App() {
     setLoadError(false); setLoadMsg('🎵 Fetching songs from iTunes...')
     setScreen('soloLoading')
     try {
-      const tracks = await fetchSongs(soloPack.term)
+      const tracks = await fetchSongs(soloPack.term, soloPack.artistOnly ?? false)
       if (tracks.length < 8) throw new Error('Not enough songs with previews')
       const built = buildRoundData(tracks, Math.min(soloRounds, tracks.length - 3))
       setBuiltRounds(built); setCurrentRound(0)
