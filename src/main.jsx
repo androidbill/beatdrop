@@ -7,7 +7,7 @@ import {
   createRoom, joinRoom, startGame, submitAnswer, advanceRound, leaveRoom, calcScores,
 } from './firebase.js'
 
-const APP_VERSION = '2026.07.06.05'
+const APP_VERSION = '2026.07.06.06'
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 
@@ -20,17 +20,37 @@ const THEMES = [
 ]
 
 const SONG_PACKS = [
-  { id: 'party',   name: 'Party Mix',     term: 'top hits',             emoji: '🎉', desc: 'The ultimate crowd pleaser' },
-  { id: '80s',     name: '80s Hits',      term: '80s classic pop hits', emoji: '🕺', desc: 'Totally radical!' },
-  { id: '90s',     name: '90s Bangers',   term: '90s greatest hits',    emoji: '💿', desc: 'All that and a bag of chips' },
-  { id: '00s',     name: '2000s Pop',     term: '2000s pop hits',       emoji: '🌟', desc: 'Y2K certified bops' },
-  { id: 'hiphop',  name: 'Hip Hop',       term: 'hip hop rap classics', emoji: '🎤', desc: 'Drop the beat' },
-  { id: 'country', name: 'Country',       term: 'country hits',         emoji: '🤠', desc: 'Boots & banjos baby' },
-  { id: 'rock',    name: 'Rock',          term: 'classic rock hits',    emoji: '🎸', desc: 'Turn it up to 11' },
-  { id: 'rnb',     name: 'R&B Soul',      term: 'rnb soul hits',        emoji: '💃', desc: 'Feel the groove' },
-  { id: 'latin',   name: 'Latin Hits',    term: 'latin pop hits',       emoji: '🌴', desc: 'Hot hot hot' },
-  { id: 'today',   name: "Today's Hits",  term: 'pop hits 2024',        emoji: '🔥', desc: 'Current bangers only' },
+  // Decades
+  { id: '60s',       name: '60s Classics',  term: '60s classic hits',            emoji: '☮️', desc: 'Peace, love & rock n roll' },
+  { id: '70s',       name: '70s Hits',      term: '70s greatest hits',           emoji: '🪩', desc: 'Boogie nights!' },
+  { id: '80s',       name: '80s Hits',      term: '80s classic pop hits',        emoji: '🕺', desc: 'Totally radical!' },
+  { id: '90s',       name: '90s Bangers',   term: '90s greatest hits',           emoji: '💿', desc: 'All that and a bag of chips' },
+  { id: '00s',       name: '2000s Pop',     term: '2000s pop hits',              emoji: '🌟', desc: 'Y2K certified bops' },
+  { id: '10s',       name: '2010s Hits',    term: '2010s pop hits',              emoji: '📱', desc: 'The Instagram era' },
+  { id: 'today',     name: "Today's Hits",  term: 'pop hits 2024',               emoji: '🔥', desc: 'Current bangers only' },
+  // Genres
+  { id: 'party',     name: 'Party Mix',     term: 'top hits',                    emoji: '🎉', desc: 'The ultimate crowd pleaser' },
+  { id: 'pop',       name: 'Pop Anthems',   term: 'pop anthems hits',            emoji: '🌈', desc: 'Sing it loud' },
+  { id: 'hiphop',    name: 'Hip Hop',       term: 'hip hop rap classics',        emoji: '🎤', desc: 'Drop the beat' },
+  { id: 'rnb',       name: 'R&B Soul',      term: 'rnb soul hits',               emoji: '💃', desc: 'Feel the groove' },
+  { id: 'rock',      name: 'Classic Rock',  term: 'classic rock hits',           emoji: '🎸', desc: 'Turn it up to 11' },
+  { id: 'indierock', name: 'Indie Rock',    term: 'indie rock alternative hits', emoji: '🎵', desc: 'Hipster approved' },
+  { id: 'metal',     name: 'Metal',         term: 'heavy metal hits',            emoji: '🤘', desc: 'Headbanger special' },
+  { id: 'punk',      name: 'Punk Rock',     term: 'punk rock hits',              emoji: '⚡', desc: 'Anarchy in the charts' },
+  { id: 'country',   name: 'Country',       term: 'country hits',                emoji: '🤠', desc: 'Boots & banjos baby' },
+  { id: 'latin',     name: 'Latin Hits',    term: 'latin pop hits',              emoji: '🌴', desc: 'Hot hot hot' },
+  { id: 'kpop',      name: 'K-Pop',         term: 'kpop hits',                   emoji: '⭐', desc: 'Annyeong!' },
+  { id: 'reggae',    name: 'Reggae',        term: 'reggae hits',                 emoji: '🎶', desc: 'One love' },
+  { id: 'edm',       name: 'EDM / Dance',   term: 'edm electronic dance music',  emoji: '🎧', desc: 'Drop the bass' },
+  { id: 'jazz',      name: 'Jazz & Blues',  term: 'jazz blues classics',         emoji: '🎷', desc: 'Smooth operator' },
+  { id: 'soul',      name: 'Motown Soul',   term: 'motown soul classics',        emoji: '🕺', desc: 'Straight from Detroit' },
+  { id: 'disney',    name: 'Disney',        term: 'disney movie songs',          emoji: '🏰', desc: 'Hakuna Matata!' },
+  { id: 'christmas', name: 'Christmas',     term: 'christmas holiday songs',     emoji: '🎄', desc: 'Tis the season' },
+  { id: 'bollywood', name: 'Bollywood',     term: 'bollywood hits',              emoji: '🎬', desc: 'Bollywood magic' },
+  { id: 'kids',      name: 'Kids Songs',    term: 'children songs kids',         emoji: '🧒', desc: 'For the young ones' },
 ]
+
+const DECADE_IDS = ['60s','70s','80s','90s','00s','10s','today']
 
 const AVATARS = [
   '🐻','🦊','🐼','🐯','🦁','🐺','🐸','🐙','🦄','🐲',
@@ -296,6 +316,92 @@ function JoinRoomScreen({ onJoin, onBack, loading, error }) {
   )
 }
 
+// ─── PACK PICKER ─────────────────────────────────────────────────────────────
+
+function PackPicker({ pack, onChange }) {
+  const [showCustom, setShowCustom] = useState(pack?.isCustom ?? false)
+  const [customArtist, setCustomArtist] = useState(pack?.isCustom ? pack.name : '')
+  const [customError, setCustomError] = useState('')
+  const [validating, setValidating] = useState(false)
+  const [validated, setValidated] = useState(pack?.isCustom && !!pack.term)
+
+  const selectVal = showCustom ? '__custom__' : (pack?.id ?? SONG_PACKS[0].id)
+
+  function handleSelectChange(e) {
+    const val = e.target.value
+    if (val === '__custom__') {
+      setShowCustom(true)
+      setCustomArtist('')
+      setValidated(false)
+      setCustomError('')
+      onChange({ id: '__custom__', name: '', term: '', emoji: '🎤', isCustom: true, desc: '' })
+    } else {
+      setShowCustom(false)
+      setValidated(false)
+      setCustomError('')
+      onChange(SONG_PACKS.find(p => p.id === val) ?? SONG_PACKS[0])
+    }
+  }
+
+  async function validateArtist() {
+    const name = customArtist.trim()
+    if (!name) return
+    setValidating(true)
+    setCustomError('')
+    setValidated(false)
+    try {
+      const tracks = await fetchSongs(name)
+      if (tracks.length < 4) {
+        setCustomError(`No songs found for "${name}". Try a different spelling.`)
+        onChange({ id: '__custom__', name: '', term: '', emoji: '🎤', isCustom: true, desc: '' })
+      } else {
+        onChange({ id: `custom_${name}`, name, term: name, emoji: '🎤', isCustom: true, desc: `Songs by ${name}` })
+        setValidated(true)
+      }
+    } catch {
+      setCustomError('Search failed. Check your connection.')
+    } finally {
+      setValidating(false)
+    }
+  }
+
+  return (
+    <div className="pack-picker">
+      <label className="pack-picker-label">Category</label>
+      <select className="pack-select" value={selectVal} onChange={handleSelectChange}>
+        <option value="__custom__">🎤 Custom Artist / Band...</option>
+        <optgroup label="── Decades ──────────">
+          {SONG_PACKS.filter(p => DECADE_IDS.includes(p.id)).map(p => (
+            <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>
+          ))}
+        </optgroup>
+        <optgroup label="── Genres ───────────">
+          {SONG_PACKS.filter(p => !DECADE_IDS.includes(p.id)).map(p => (
+            <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>
+          ))}
+        </optgroup>
+      </select>
+
+      {showCustom && (
+        <div className="custom-artist-row">
+          <div className="custom-artist-input-wrap">
+            <input className="name-input" placeholder="Type artist or band name..."
+              value={customArtist}
+              onChange={e => { setCustomArtist(e.target.value); setValidated(false); setCustomError('') }}
+              onKeyDown={e => e.key === 'Enter' && validateArtist()} />
+            <button className="btn-secondary custom-search-btn" onClick={validateArtist}
+              disabled={!customArtist.trim() || validating}>
+              {validating ? '⏳' : '🔍'}
+            </button>
+          </div>
+          {customError && <p className="error-msg">⚠️ {customError}</p>}
+          {validated && <p className="success-msg">✓ Found songs for <strong>{customArtist}</strong>!</p>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── CREATE ROOM SCREEN ───────────────────────────────────────────────────────
 
 function CreateRoomScreen({ onStart, onBack, loading, error }) {
@@ -309,16 +415,7 @@ function CreateRoomScreen({ onStart, onBack, loading, error }) {
         <button className="btn-back" onClick={onBack}>← Back</button>
         <h2 className="screen-title">Create a Room</h2>
 
-        <div className="packs-grid">
-          {SONG_PACKS.map(p => (
-            <button key={p.id} className={`pack-card ${pack?.id === p.id ? 'selected' : ''}`}
-              onClick={() => setPack(p)}>
-              <span className="pack-emoji">{p.emoji}</span>
-              <span className="pack-name">{p.name}</span>
-              <span className="pack-desc">{p.desc}</span>
-            </button>
-          ))}
-        </div>
+        <PackPicker pack={pack} onChange={setPack} />
 
         <div className="rounds-row">
           <span className="rounds-label">Rounds:</span>
@@ -330,7 +427,7 @@ function CreateRoomScreen({ onStart, onBack, loading, error }) {
 
         {error && <p className="error-msg">⚠️ {error}</p>}
 
-        <button className="btn-primary" onClick={() => onStart(pack, rounds)} disabled={loading}>
+        <button className="btn-primary" onClick={() => onStart(pack, rounds)} disabled={loading || !pack?.term}>
           {loading ? 'Creating...' : 'Create Room! 🎵'}
         </button>
       </div>
@@ -594,7 +691,7 @@ function OnlineFinalScreen({ players, rounds, answers, totalRounds, onHome }) {
 
   return (
     <div className="screen final-screen">
-      <canvas ref={canvasRef} className="overlay-canvas" />
+      <canvas ref={canvasRef} className="fireworks-bg" />
       <div className="final-inner">
         <h1 className="final-title">🏆 Game Over! 🏆</h1>
 
@@ -711,16 +808,9 @@ function PackSelectScreen({ pack, rounds, onPackSelect, onRoundsChange, onStart,
       <div className="screen-card pack-card-wrap">
         <button className="btn-back" onClick={onBack}>← Back</button>
         <h2 className="screen-title">Choose Your Pack</h2>
-        <div className="packs-grid">
-          {SONG_PACKS.map(p => (
-            <button key={p.id} className={`pack-card ${pack?.id === p.id ? 'selected' : ''}`}
-              onClick={() => onPackSelect(p)}>
-              <span className="pack-emoji">{p.emoji}</span>
-              <span className="pack-name">{p.name}</span>
-              <span className="pack-desc">{p.desc}</span>
-            </button>
-          ))}
-        </div>
+
+        <PackPicker pack={pack} onChange={onPackSelect} />
+
         <div className="rounds-row">
           <span className="rounds-label">Rounds:</span>
           {ROUND_COUNTS.map(r => (
@@ -728,7 +818,7 @@ function PackSelectScreen({ pack, rounds, onPackSelect, onRoundsChange, onStart,
               onClick={() => onRoundsChange(r)}>{r}</button>
           ))}
         </div>
-        <button className="btn-primary" onClick={onStart} disabled={!pack}>Start Game! 🎵</button>
+        <button className="btn-primary" onClick={onStart} disabled={!pack?.term}>Start Game! 🎵</button>
       </div>
     </div>
   )
@@ -917,7 +1007,7 @@ function SoloFinalScreen({ players, onPlayAgain, onHome }) {
   useEffect(() => { if (canvasRef.current) return launchFireworks(canvasRef.current, 6000) }, [])
   return (
     <div className="screen final-screen">
-      <canvas ref={canvasRef} className="overlay-canvas" />
+      <canvas ref={canvasRef} className="fireworks-bg" />
       <div className="final-inner">
         <h1 className="final-title">🏆 Game Over! 🏆</h1>
         <div className="winner-box">
