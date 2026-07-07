@@ -7,7 +7,7 @@ import {
   createRoom, joinRoom, startGame, submitAnswer, advanceRound, leaveRoom, calcScores,
 } from './firebase.js'
 
-const APP_VERSION = '2026.07.06.16'
+const APP_VERSION = '2026.07.06.17'
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 
@@ -500,26 +500,32 @@ function JoinRoomScreen({ onJoin, onBack, loading, error }) {
 // ─── PACK PICKER ─────────────────────────────────────────────────────────────
 
 function PackPicker({ pack, onChange }) {
-  const [showCustom, setShowCustom] = useState(pack?.isCustom ?? false)
+  const initMode = pack?.isCustom ? '__custom__' : pack?.isSongsLike ? '__songslike__' : (pack?.id ?? SONG_PACKS[0].id)
+  const [selectVal, setSelectVal] = useState(initMode)
   const [customArtist, setCustomArtist] = useState(pack?.isCustom ? pack.name : '')
-  const [customError, setCustomError] = useState('')
+  const [songQuery, setSongQuery] = useState(pack?.isSongsLike ? (pack.songName ?? '') : '')
+  const [error, setError] = useState('')
   const [validating, setValidating] = useState(false)
-  const [validated, setValidated] = useState(pack?.isCustom && !!pack.term)
-
-  const selectVal = showCustom ? '__custom__' : (pack?.id ?? SONG_PACKS[0].id)
+  const [validated, setValidated] = useState(
+    (pack?.isCustom && !!pack.term) || (pack?.isSongsLike && !!pack.term)
+  )
+  const [validatedLabel, setValidatedLabel] = useState(
+    pack?.isSongsLike && pack.term ? `Songs Like "${pack.songName}"` : ''
+  )
 
   function handleSelectChange(e) {
     const val = e.target.value
+    setSelectVal(val)
+    setError('')
+    setValidated(false)
+    setValidatedLabel('')
     if (val === '__custom__') {
-      setShowCustom(true)
       setCustomArtist('')
-      setValidated(false)
-      setCustomError('')
-      onChange({ id: '__custom__', name: '', term: '', emoji: '🎤', isCustom: true, desc: '' })
+      onChange({ id: '__custom__', name: '', term: '', emoji: '🎤', isCustom: true, artistOnly: true, desc: '' })
+    } else if (val === '__songslike__') {
+      setSongQuery('')
+      onChange({ id: '__songslike__', name: '', term: '', emoji: '🎵', isSongsLike: true, desc: '' })
     } else {
-      setShowCustom(false)
-      setValidated(false)
-      setCustomError('')
       onChange(SONG_PACKS.find(p => p.id === val) ?? SONG_PACKS[0])
     }
   }
@@ -528,19 +534,58 @@ function PackPicker({ pack, onChange }) {
     const name = customArtist.trim()
     if (!name) return
     setValidating(true)
-    setCustomError('')
+    setError('')
     setValidated(false)
     try {
       const tracks = await fetchSongs(name, true)
       if (tracks.length < 4) {
-        setCustomError(`No songs found for "${name}". Try a different spelling.`)
+        setError(`No songs found for "${name}". Try a different spelling.`)
         onChange({ id: '__custom__', name: '', term: '', emoji: '🎤', isCustom: true, artistOnly: true, desc: '' })
       } else {
         onChange({ id: `custom_${name}`, name, term: name, emoji: '🎤', isCustom: true, artistOnly: true, desc: `Songs by ${name}` })
         setValidated(true)
       }
     } catch {
-      setCustomError('Search failed. Check your connection.')
+      setError('Search failed. Check your connection.')
+    } finally {
+      setValidating(false)
+    }
+  }
+
+  async function validateSong() {
+    const name = songQuery.trim()
+    if (!name) return
+    setValidating(true)
+    setError('')
+    setValidated(false)
+    setValidatedLabel('')
+    try {
+      const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(name)}&entity=song&limit=5&media=music`)
+      const data = await res.json()
+      const song = data.results?.find(t => t.previewUrl && t.trackName)
+      if (!song) {
+        setError(`Song "${name}" not found. Try a different title.`)
+        onChange({ id: '__songslike__', name: '', term: '', emoji: '🎵', isSongsLike: true, desc: '' })
+        return
+      }
+      const genre = song.primaryGenreName || 'pop'
+      const year = song.releaseDate ? new Date(song.releaseDate).getFullYear() : 2000
+      const decade = Math.floor(year / 10) * 10
+      const term = `${decade}s ${genre}`
+      const packName = `Songs Like "${song.trackName}"`
+      onChange({
+        id: `songslike_${name}`,
+        name: packName,
+        term,
+        emoji: '🎵',
+        isSongsLike: true,
+        songName: song.trackName,
+        desc: `${genre}, ${decade}s`
+      })
+      setValidatedLabel(`"${song.trackName}" by ${song.artistName} · ${genre} (${year})`)
+      setValidated(true)
+    } catch {
+      setError('Search failed. Check your connection.')
     } finally {
       setValidating(false)
     }
@@ -550,6 +595,7 @@ function PackPicker({ pack, onChange }) {
     <div className="pack-picker">
       <label className="pack-picker-label">Category</label>
       <select className="pack-select" value={selectVal} onChange={handleSelectChange}>
+        <option value="__songslike__">🎵 Songs Like...</option>
         <option value="__custom__">🎤 Custom Artist / Band...</option>
         <optgroup label="── Decades ──────────">
           {SONG_PACKS.filter(p => DECADE_IDS.includes(p.id)).map(p => (
@@ -578,20 +624,37 @@ function PackPicker({ pack, onChange }) {
         </optgroup>
       </select>
 
-      {showCustom && (
+      {selectVal === '__custom__' && (
         <div className="custom-artist-row">
           <div className="custom-artist-input-wrap">
             <input className="name-input" placeholder="Type artist or band name..."
               value={customArtist}
-              onChange={e => { setCustomArtist(e.target.value); setValidated(false); setCustomError('') }}
+              onChange={e => { setCustomArtist(e.target.value); setValidated(false); setError('') }}
               onKeyDown={e => e.key === 'Enter' && validateArtist()} />
             <button className="btn-secondary custom-search-btn" onClick={validateArtist}
               disabled={!customArtist.trim() || validating}>
               {validating ? '⏳' : '🔍'}
             </button>
           </div>
-          {customError && <p className="error-msg">⚠️ {customError}</p>}
+          {error && <p className="error-msg">⚠️ {error}</p>}
           {validated && <p className="success-msg">✓ Found songs for <strong>{customArtist}</strong>!</p>}
+        </div>
+      )}
+
+      {selectVal === '__songslike__' && (
+        <div className="custom-artist-row">
+          <div className="custom-artist-input-wrap">
+            <input className="name-input" placeholder="Type a song name..."
+              value={songQuery}
+              onChange={e => { setSongQuery(e.target.value); setValidated(false); setError('') }}
+              onKeyDown={e => e.key === 'Enter' && validateSong()} />
+            <button className="btn-secondary custom-search-btn" onClick={validateSong}
+              disabled={!songQuery.trim() || validating}>
+              {validating ? '⏳' : '🔍'}
+            </button>
+          </div>
+          {error && <p className="error-msg">⚠️ {error}</p>}
+          {validated && <p className="success-msg">✓ {validatedLabel}</p>}
         </div>
       )}
     </div>
@@ -1483,7 +1546,7 @@ function App() {
       const pack = roomData?.pack
       const knownPack = SONG_PACKS.find(p => p.id === pack?.id)
       const term = knownPack?.term ?? pack?.term ?? 'top hits'
-      const artistOnly = pack?.artistOnly ?? false
+      const artistOnly = !pack?.isSongsLike && (pack?.artistOnly ?? false)
       const tracks = await fetchSongs(term, artistOnly)
       if (tracks.length < 8) throw new Error('Not enough songs found')
       const rounds = buildRoundData(tracks, roomData?.totalRounds ?? 10)
@@ -1505,7 +1568,7 @@ function App() {
     setLoadError(false); setLoadMsg('🎵 Fetching songs from iTunes...')
     setScreen('soloLoading')
     try {
-      const tracks = await fetchSongs(soloPack.term, soloPack.artistOnly ?? false)
+      const tracks = await fetchSongs(soloPack.term, !soloPack.isSongsLike && (soloPack.artistOnly ?? false))
       if (tracks.length < 8) throw new Error('Not enough songs with previews')
       const built = buildRoundData(tracks, Math.min(soloRounds, tracks.length - 3))
       setBuiltRounds(built); setCurrentRound(0)
