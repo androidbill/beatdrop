@@ -42,7 +42,7 @@ export async function createRoom(db, uid, pack, totalRounds) {
   await set(ref(db, `rooms/${code}`), {
     hostUid: uid,
     status: 'lobby',
-    pack: { id: pack.id, name: pack.name, emoji: pack.emoji },
+    pack: { id: pack.id, name: pack.name, emoji: pack.emoji, term: pack.term ?? '', artistOnly: pack.artistOnly ?? false },
     totalRounds,
     currentRound: 0,
     createdAt: Date.now(),

@@ -7,7 +7,7 @@ import {
   createRoom, joinRoom, startGame, submitAnswer, advanceRound, leaveRoom, calcScores,
 } from './firebase.js'
 
-const APP_VERSION = '2026.07.06.09'
+const APP_VERSION = '2026.07.06.10'
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 
