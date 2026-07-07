@@ -7,7 +7,7 @@ import {
   createRoom, joinRoom, startGame, submitAnswer, advanceRound, leaveRoom, calcScores,
 } from './firebase.js'
 
-const APP_VERSION = '2026.07.06.14'
+const APP_VERSION = '2026.07.06.16'
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 
@@ -117,8 +117,13 @@ async function fetchSongs(term, artistOnly = false) {
     )
     if (!songsRes.ok) throw new Error('iTunes API error')
     const songsData = await songsRes.json()
+    const officialName = artist.artistName.toLowerCase()
     return songsData.results.filter(t =>
-      t.wrapperType === 'track' && t.previewUrl && t.trackName && t.artistName
+      t.wrapperType === 'track' &&
+      t.previewUrl &&
+      t.trackName &&
+      t.artistName &&
+      t.artistName.toLowerCase() === officialName
     )
   }
 
@@ -132,8 +137,18 @@ async function fetchSongs(term, artistOnly = false) {
 function buildRoundData(tracks, count) {
   const shuffled = [...tracks].sort(() => Math.random() - 0.5)
   return shuffled.slice(0, count).map(correct => {
-    const pool = shuffled.filter(t => t.trackId !== correct.trackId)
-    const wrong = pool.sort(() => Math.random() - 0.5).slice(0, 3)
+    const correctName = correct.trackName.toLowerCase()
+    const pool = [...shuffled].sort(() => Math.random() - 0.5)
+    const seen = new Set([correctName])
+    const wrong = []
+    for (const t of pool) {
+      if (wrong.length === 3) break
+      const n = t.trackName.toLowerCase()
+      if (t.trackId !== correct.trackId && !seen.has(n)) {
+        seen.add(n)
+        wrong.push(t)
+      }
+    }
     const options = [correct, ...wrong].sort(() => Math.random() - 0.5).map(t => ({
       trackId: t.trackId, trackName: t.trackName, artistName: t.artistName,
     }))
@@ -914,10 +929,10 @@ function OnlineFinalScreen({ players, rounds, answers, totalRounds, onHome }) {
 
         {sorted.length >= 2 && (
           <div className="podium-wrap">
-            {[1, 0, 2].map(rank => {
+            {[0, 1, 2].map(rank => {
               const p = sorted[rank]
               if (!p) return <div key={rank} className="podium-slot empty" />
-              const heights = [140, 200, 100]
+              const heights = [180, 130, 90]
               return (
                 <div key={rank} className="podium-slot">
                   <div className="podium-top">
