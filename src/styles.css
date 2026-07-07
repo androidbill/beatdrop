@@ -592,7 +592,7 @@ body {
   flex-shrink: 0;
 }
 .opt-text { flex: 1; min-width: 0; }
-.opt-track { font-weight: 700; font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.opt-track { font-weight: 700; font-size: 0.78rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .opt-artist { font-size: 0.68rem; color: rgba(255,255,255,0.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .opt-check { font-size: 1rem; color: #4CAF50; flex-shrink: 0; }
 

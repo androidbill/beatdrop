@@ -7,7 +7,7 @@ import {
   createRoom, joinRoom, startGame, submitAnswer, advanceRound, leaveRoom, calcScores,
 } from './firebase.js'
 
-const APP_VERSION = '2026.07.06.12'
+const APP_VERSION = '2026.07.06.13'
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 
@@ -665,8 +665,12 @@ function OnlineGameScreen({ uid, isHost, roomCode, roomData, players, rounds, an
     if (audioRef.current && shouldPlay) {
       audioRef.current.volume = 1
       audioRef.current.src = round.correct.previewUrl
-      audioRef.current.currentTime = Math.floor(Math.random() * 12)
-      audioRef.current.play().catch(() => {})
+      audioRef.current.addEventListener('loadedmetadata', () => {
+        const dur = audioRef.current?.duration || 30
+        const safeEnd = Math.max(0, dur - TIMER_DURATION - 3)
+        audioRef.current.currentTime = Math.random() * Math.min(safeEnd, 10)
+        audioRef.current.play().catch(() => {})
+      }, { once: true })
     }
 
     // Sync timer to startAt
@@ -1011,9 +1015,14 @@ function SoloGameScreen({ players, setPlayers, rounds, currentRound, onRoundEnd,
     answersRef.current = {}; revealedRef.current = false; timeLeftRef.current = TIMER_DURATION
     setAnswers({}); setTimeLeft(TIMER_DURATION); setRevealed(false); setRoundScore({})
     if (audioRef.current) {
-      audioRef.current.volume = 1; audioRef.current.src = correct.previewUrl
-      audioRef.current.currentTime = round.startAt ?? Math.floor(Math.random() * 12)
-      audioRef.current.play().catch(() => {})
+      audioRef.current.volume = 1
+      audioRef.current.src = correct.previewUrl
+      audioRef.current.addEventListener('loadedmetadata', () => {
+        const dur = audioRef.current?.duration || 30
+        const safeEnd = Math.max(0, dur - TIMER_DURATION - 3)
+        audioRef.current.currentTime = Math.random() * Math.min(safeEnd, 10)
+        audioRef.current.play().catch(() => {})
+      }, { once: true })
     }
     const start = Date.now()
     timerRef.current = setInterval(() => {
