@@ -7,7 +7,7 @@ import {
   createRoom, joinRoom, startGame, submitAnswer, advanceRound, leaveRoom, calcScores,
 } from './firebase.js'
 
-const APP_VERSION = '2026.07.06.08'
+const APP_VERSION = '2026.07.06.09'
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 
@@ -66,17 +66,32 @@ const ANSWER_LABELS = ['A', 'B', 'C', 'D']
 // ─── ITUNES API ───────────────────────────────────────────────────────────────
 
 async function fetchSongs(term, artistOnly = false) {
-  const base = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song&limit=100&media=music`
-  const url = artistOnly ? `${base}&attribute=artistTerm` : base
+  if (artistOnly) {
+    // Step 1: find the artist's iTunes ID
+    const artistRes = await fetch(
+      `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=musicArtist&limit=5`
+    )
+    if (!artistRes.ok) throw new Error('iTunes API error')
+    const artistData = await artistRes.json()
+    const artist = artistData.results?.[0]
+    if (!artist) throw new Error('Artist not found')
+
+    // Step 2: look up songs by that artist ID directly
+    const songsRes = await fetch(
+      `https://itunes.apple.com/lookup?id=${artist.artistId}&entity=song&limit=200`
+    )
+    if (!songsRes.ok) throw new Error('iTunes API error')
+    const songsData = await songsRes.json()
+    return songsData.results.filter(t =>
+      t.wrapperType === 'track' && t.previewUrl && t.trackName && t.artistName
+    )
+  }
+
+  const url = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song&limit=50&media=music`
   const res = await fetch(url)
   if (!res.ok) throw new Error('iTunes API error')
   const data = await res.json()
-  let results = data.results.filter(t => t.previewUrl && t.trackName && t.artistName)
-  if (artistOnly) {
-    const lower = term.toLowerCase()
-    results = results.filter(t => t.artistName.toLowerCase().includes(lower))
-  }
-  return results
+  return data.results.filter(t => t.previewUrl && t.trackName && t.artistName)
 }
 
 function buildRoundData(tracks, count) {
