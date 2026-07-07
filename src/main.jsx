@@ -7,7 +7,7 @@ import {
   createRoom, joinRoom, startGame, submitAnswer, advanceRound, leaveRoom, calcScores,
 } from './firebase.js'
 
-const APP_VERSION = '2026.07.06.06'
+const APP_VERSION = '2026.07.06.07'
 
 // ─── CONSTANTS ───────────────────────────────────────────────────────────────
 
@@ -197,12 +197,115 @@ function TimerBar({ timeLeft }) {
   )
 }
 
+// ─── PULL TO REFRESH ─────────────────────────────────────────────────────────
+
+function PullToRefresh() {
+  const [dist, setDist] = useState(0)
+  const startY = useRef(null)
+  const THRESHOLD = 72
+
+  useEffect(() => {
+    function onStart(e) {
+      startY.current = e.touches[0].clientY
+    }
+    function onMove(e) {
+      if (startY.current === null) return
+      const d = Math.max(0, e.touches[0].clientY - startY.current)
+      setDist(Math.min(d, THRESHOLD + 24))
+    }
+    function onEnd() {
+      if (dist >= THRESHOLD) window.location.reload()
+      startY.current = null
+      setDist(0)
+    }
+    window.addEventListener('touchstart', onStart, { passive: true })
+    window.addEventListener('touchmove', onMove, { passive: true })
+    window.addEventListener('touchend', onEnd)
+    return () => {
+      window.removeEventListener('touchstart', onStart)
+      window.removeEventListener('touchmove', onMove)
+      window.removeEventListener('touchend', onEnd)
+    }
+  }, [dist])
+
+  if (dist < 8) return null
+  const progress = Math.min(dist / THRESHOLD, 1)
+  const ready = dist >= THRESHOLD
+  return (
+    <div className="ptr-bar" style={{ opacity: progress }}>
+      <div className="ptr-icon" style={{ transform: `rotate(${progress * 180}deg)` }}>
+        {ready ? '✓' : '↓'}
+      </div>
+      <span>{ready ? 'Release to refresh' : 'Pull to refresh'}</span>
+    </div>
+  )
+}
+
+// ─── THREE DOT MENU + ABOUT ───────────────────────────────────────────────────
+
+function AboutModal({ onClose }) {
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-card" onClick={e => e.stopPropagation()}>
+        <img src={`${import.meta.env.BASE_URL}icons/icon-192.png`} className="about-icon" alt="BeatDrop" />
+        <h2 className="about-title">BeatDrop</h2>
+        <p className="about-sub">The Ultimate Music Party Game</p>
+        <p className="about-version">Version {APP_VERSION}</p>
+        <p className="about-credit">Created by Bill Parsons</p>
+        <p className="about-powered">Powered by iTunes Search API</p>
+        <button className="btn-primary" style={{ marginTop: 8 }} onClick={onClose}>Close</button>
+      </div>
+    </div>
+  )
+}
+
+function ThreeDotsMenu() {
+  const [open, setOpen] = useState(false)
+  const [showAbout, setShowAbout] = useState(false)
+  const menuRef = useRef(null)
+
+  useEffect(() => {
+    function onOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onOutside)
+    document.addEventListener('touchstart', onOutside)
+    return () => {
+      document.removeEventListener('mousedown', onOutside)
+      document.removeEventListener('touchstart', onOutside)
+    }
+  }, [])
+
+  return (
+    <>
+      <div className="three-dots-wrap" ref={menuRef}>
+        <button className="three-dots-btn" onClick={() => setOpen(v => !v)} aria-label="Menu">
+          <span /><span /><span />
+        </button>
+        {open && (
+          <div className="dots-dropdown">
+            <button className="dots-item" onClick={() => { setOpen(false); window.location.reload() }}>
+              🔄 Refresh
+            </button>
+            <button className="dots-item" onClick={() => { setOpen(false); setShowAbout(true) }}>
+              ℹ️ About
+            </button>
+          </div>
+        )}
+      </div>
+      {showAbout && <AboutModal onClose={() => setShowAbout(false)} />}
+    </>
+  )
+}
+
 // ─── WELCOME SCREEN ───────────────────────────────────────────────────────────
 
 function WelcomeScreen({ onCreate, onJoin, onSolo, theme, onThemeChange, signingIn }) {
   return (
     <div className="screen welcome-screen">
+      <PullToRefresh />
       <ParticlesBg />
+      <ThreeDotsMenu />
       <div className="welcome-content">
         <div className="logo-wrap">
           <div className="logo-note">🎵</div>
@@ -494,7 +597,7 @@ function LobbyScreen({ roomCode, players, isHost, pack, totalRounds, onStart, on
 
 // ─── ONLINE GAME SCREEN ───────────────────────────────────────────────────────
 
-function OnlineGameScreen({ uid, isHost, roomCode, roomData, players, rounds, answers, onAdvance }) {
+function OnlineGameScreen({ uid, isHost, roomCode, roomData, players, rounds, answers, onAdvance, onCancel }) {
   const ri = roomData?.currentRound ?? 0
   const round = rounds?.[ri]
   const totalRounds = roomData?.totalRounds ?? 10
@@ -502,6 +605,7 @@ function OnlineGameScreen({ uid, isHost, roomCode, roomData, players, rounds, an
   const [timeLeft, setTimeLeft] = useState(TIMER_DURATION)
   const [localRevealed, setLocalRevealed] = useState(false)
   const [myAnswer, setMyAnswer] = useState(null)
+  const [confirmCancel, setConfirmCancel] = useState(false)
 
   const audioRef = useRef(null)
   const timerRef = useRef(null)
@@ -598,10 +702,22 @@ function OnlineGameScreen({ uid, isHost, roomCode, roomData, players, rounds, an
       {artUrl && <div className="art-bg" />}
 
       <div className="game-inner">
+        {/* Cancel confirm overlay */}
+        {confirmCancel && (
+          <div className="cancel-confirm">
+            <p>End game for everyone?</p>
+            <div className="cancel-btns">
+              <button className="btn-secondary" onClick={() => setConfirmCancel(false)}>Keep Playing</button>
+              <button className="btn-danger" onClick={onCancel}>End Game</button>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="game-header">
           <div className="round-pill">Round {ri + 1} / {totalRounds}</div>
           <TimerBar timeLeft={timeLeft} />
+          {isHost && <button className="cancel-game-btn" onClick={() => setConfirmCancel(true)}>✕ End</button>}
           <div className="song-status">
             {localRevealed ? (
               <div className="song-reveal">
@@ -837,13 +953,14 @@ function LoadingScreen({ message, error, onBack }) {
   )
 }
 
-function SoloGameScreen({ players, setPlayers, rounds, currentRound, onRoundEnd }) {
+function SoloGameScreen({ players, setPlayers, rounds, currentRound, onRoundEnd, onCancel }) {
   const round = rounds[currentRound]
   const { correct, options } = round
   const [answers, setAnswers] = useState({})
   const [timeLeft, setTimeLeft] = useState(TIMER_DURATION)
   const [revealed, setRevealed] = useState(false)
   const [roundScore, setRoundScore] = useState({})
+  const [confirmCancel, setConfirmCancel] = useState(false)
   const audioRef = useRef(null)
   const timerRef = useRef(null)
   const timeLeftRef = useRef(TIMER_DURATION)
@@ -913,9 +1030,19 @@ function SoloGameScreen({ players, setPlayers, rounds, currentRound, onRoundEnd 
       <canvas ref={confettiRef} className="overlay-canvas" />
       {artUrl && <div className="art-bg" />}
       <div className="game-inner">
+        {confirmCancel && (
+          <div className="cancel-confirm">
+            <p>Quit the game?</p>
+            <div className="cancel-btns">
+              <button className="btn-secondary" onClick={() => setConfirmCancel(false)}>Keep Playing</button>
+              <button className="btn-danger" onClick={onCancel}>Quit</button>
+            </div>
+          </div>
+        )}
         <div className="game-header">
           <div className="round-pill">Round {currentRound + 1} / {rounds.length}</div>
           <TimerBar timeLeft={timeLeft} />
+          <button className="cancel-game-btn" onClick={() => setConfirmCancel(true)}>✕ Quit</button>
           <div className="song-status">
             {revealed ? (
               <div className="song-reveal">
@@ -1316,7 +1443,7 @@ function App() {
         <OnlineGameScreen uid={uid} isHost={isHost} roomCode={roomCode}
           roomData={roomData} players={onlinePlayers}
           rounds={onlineRounds} answers={onlineAnswers}
-          onAdvance={handleAdvance} />
+          onAdvance={handleAdvance} onCancel={handleLeaveRoom} />
       )}
 
       {screen === 'onlineFinal' && (
@@ -1346,7 +1473,8 @@ function App() {
       {screen === 'soloGame' && builtRounds.length > 0 && (
         <SoloGameScreen players={soloPlayers} setPlayers={setSoloPlayers}
           rounds={builtRounds} currentRound={currentRound}
-          onRoundEnd={handleSoloRoundEnd} />
+          onRoundEnd={handleSoloRoundEnd}
+          onCancel={() => { setSoloPlayers([]); setScreen('welcome') }} />
       )}
 
       {screen === 'soloFinal' && (
